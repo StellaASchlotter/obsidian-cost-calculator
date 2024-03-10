@@ -16,52 +16,48 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: 'sample-editor-command',
-			name: 'Sample editor command',
+			name: 'cost',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
+				var line_count = editor.lineCount()
+				var missing_items = 0
+				var bought_items = 0
+				var cost_remaining = 0
+				var cost_payed = 0
+				for (let i = 0; i < line_count; i++) {
+					var current_line = editor.getLine(i)
+					if (current_line.startsWith("- [ ]")){
+						missing_items++
+						var cost = parseFloat(current_line.substring(
+							current_line.indexOf("(") + 1, 
+							current_line.lastIndexOf("€")))
+						if (isNaN(cost)){
+							console.log(current_line);
+						}
+						cost_remaining += cost
 					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+					if (current_line.startsWith("- [x]")){
+						bought_items++
+						var cost = parseFloat(current_line.substring(
+							current_line.indexOf("(") + 1, 
+							current_line.lastIndexOf("€")))
+						cost_payed += cost
+					}
+				  }
+				  				
+				
+				let output_string = `
+<div data-callout-metadata="fuchsia" data-callout-fold data-callout="note" class="callout">
+<div class="callout-title"><div class="callout-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg></div><div class="callout-title-inner">Cost Analysis</div></div>
+<div class="callout-content">
+<p>missing_items: ${missing_items} - remaining costs ${cost_remaining}</p>
+<p>bought_items: ${bought_items} - payed: ${cost_payed}</p>
+</div>
+</div>
+`;
+				editor.replaceSelection(output_string);
 			}
 		});
 
